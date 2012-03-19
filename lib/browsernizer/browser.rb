@@ -13,12 +13,23 @@ module Browsernizer
       end
     end
 
-    def meets?(requirement)
+    def meets?(requirement, version_check = :bigger_or_equal)
       if name.downcase == requirement.name.downcase
         if requirement.version === false
           false
         else
-          version >= requirement.version
+          case version_check
+          when :bigger_or_equal
+            version >= requirement.version
+          when :equal
+            version == requirement.version
+          when :smaller_or_equal
+            version <= requirement.version
+          when :bigger
+            version > requirement.version
+          when :smaller
+            version < requirement.version
+          end
         end
       else
         nil

@@ -13,6 +13,7 @@ module Browsernizer
       raw_browser, browser = get_browsers(env)
       env["browsernizer"] = {
         "supported" => supported?(raw_browser, browser),
+        "status"  => get_browser_status(raw_browser, browser),
         "browser" => browser.name.to_s,
         "version" => browser.version.to_s
       }
@@ -23,7 +24,7 @@ module Browsernizer
 
     def redirect_request(env)
       return if path_excluded?(env)
-      if !env["browsernizer"]["supported"]
+      if env["browsernizer"]["status"] == :unsupported
         return redirect_to_specified if @config.get_location && !on_redirection_path?(env)
       elsif on_redirection_path?(env)
         return redirect_to_root
@@ -52,9 +53,15 @@ module Browsernizer
       [raw_browser, browser]
     end
 
+    def get_browser_status(raw_browser, browser)
+      return :unsupported unless supported?(raw_browser, browser)
+      return :deprecated if deprecated?(raw_browser, browser)
+      return custom_status(raw_browser, browser) || :supported
+    end
+
     # supported by default
     def supported?(raw_browser, browser)
-      !@config.get_supported.any? do |requirement|
+      !@config.get_by_status(:supported).any? do |requirement|
         supported = if requirement.respond_to?(:call)
           requirement.call(raw_browser)
         else
@@ -63,6 +70,35 @@ module Browsernizer
         supported === false
       end
     end
+
+    # deprecated if version equals or is lower
+    def deprecated?(raw_browser, browser)
+      @config.get_by_status(:deprecated).any? do |requirement|
+        if requirement.respond_to?(:call)
+          requirement.call(raw_browser)
+        else
+          browser.meets?(requirement, :smaller_or_equal)
+        end
+        supported === true
+      end
+    end
+
+    # check if a custom status is set on the browser
+    def custom_status(raw_browser, browser)
+      return nil if @config.get_by_status.empty?
+      @config.get_by_status.reject{|k, _| [:deprecated, :supported].include?(k) }.each do |status, requirements|
+        requirements.each do |requirement|
+          supported = if requirement.respond_to?(:call)
+            requirement.call(raw_browser, :smaller_or_equal)
+          else
+            browser.meets?(requirement)
+          end
+          return status if supported === true
+        end
+      end
+      nil
+    end
+
   end
 
 end

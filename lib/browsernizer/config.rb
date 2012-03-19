@@ -2,17 +2,25 @@ module Browsernizer
   class Config
 
     def initialize
-      @supported = []
+      @statusses = Hash.new {|hash, key| hash[key] = [] }
       @location = nil
       @exclusions = []
       @handler = lambda { }
     end
 
     def supported(*args, &block)
+      status(:supported, *args, &block)
+    end
+
+    def deprecated(browser, version)
+      status(:deprecated, *args, &block)
+    end
+
+    def status(status, *args, &block)
       if args.length == 2
-        @supported << Browser.new(args[0], args[1])
+        @statusses[status] << Browser.new(args[0], args[1])
       elsif block_given?
-        @supported << block
+        @statusses[status] << block
       else
         raise ArgumentError, "accepts either (browser, version) or block"
       end
@@ -27,7 +35,12 @@ module Browsernizer
     end
 
     def get_supported
-      @supported
+      get_by_status :supported
+    end
+
+    def get_by_status(status = nil)
+      return @statusses if status.nil?
+      @statusses[status]
     end
 
     def get_location

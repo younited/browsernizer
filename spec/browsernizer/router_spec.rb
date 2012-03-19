@@ -24,7 +24,7 @@ describe Browsernizer::Router do
   context "All Good" do
     it "propagates requrest with updated env" do
       app.should_receive(:call).with do |env|
-        env['browsernizer']['supported'].should be_true
+        env['browsernizer']['status'].should eq :supported
         env['browsernizer']['browser'].should == "Chrome"
         env['browsernizer']['version'].should == "7.1.1"
       end
@@ -37,7 +37,7 @@ describe Browsernizer::Router do
     context "location not set" do
       it "propagates requrest with updated env" do
         app.should_receive(:call).with do |env|
-          env['browsernizer']['supported'].should be_false
+          env['browsernizer']['status'].should eq :unsupported
         end
         subject.call(@env)
       end
@@ -80,7 +80,7 @@ describe Browsernizer::Router do
         end
         it "propagates requrest with updated env" do
           app.should_receive(:call).with do |env|
-            env['browsernizer']['supported'].should be_false
+            env['browsernizer']['status'].should eq :unsupported
           end
           subject.call(@env)
         end
